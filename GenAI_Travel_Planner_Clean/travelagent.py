@@ -1,18 +1,3 @@
-import streamlit as st
-
-# Load password from Streamlit Secrets
-PASSWORD = st.secrets["app_password"]
-
-password_input = st.text_input("Enter password to access the app:", type="password")
-
-if password_input != PASSWORD:
-    st.warning("Please enter the correct password to continue.")
-    st.stop()  # Stops the rest of the app
-import streamlit as st
-
-# Set up Streamlit UI with a travel-friendly theme - MUST BE FIRST
-st.set_page_config(page_title="🌍 AI Travel Planner", layout="wide")
-
 import json
 import os
 import re
@@ -2373,5 +2358,6 @@ if st.button("🚀 Generate Travel Plan") or st.session_state.plan_generated:
     st.markdown(itinerary.content, unsafe_allow_html=True)
 
     st.success("✅ Travel plan generated successfully!")
+
 
 
