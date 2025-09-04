@@ -1,3 +1,8 @@
+import streamlit as st
+
+# Set up Streamlit UI with a travel-friendly theme - MUST BE FIRST
+st.set_page_config(page_title="🌍 AI Travel Planner", layout="wide")
+
 import json
 import os
 import re
@@ -106,8 +111,38 @@ st.markdown("""
     
     /* Sidebar styling */
     .css-1d391kg {
-        background: linear-gradient(180deg, #2d2d2d 0%, #1a1a1a 100%);
+        background: #000000 !important;
         border-right: 3px solid #D4AF37;
+    }
+    
+    /* Sidebar section background */
+    .stSidebar > div {
+        background: #000000 !important;
+    }
+    
+    /* Sidebar radio button and text styling */
+    .stSidebar .stRadio > div > label {
+        color: #ffffff !important;
+        background: rgba(26, 26, 26, 0.8) !important;
+        border: 2px solid #D4AF37 !important;
+        border-radius: 8px !important;
+        padding: 0.6rem 1rem !important;
+        margin: 0.2rem 0 !important;
+        display: block !important;
+        cursor: pointer !important;
+        transition: all 0.3s ease !important;
+        font-weight: 500 !important;
+    }
+    
+    .stSidebar .stRadio > div > label:hover {
+        background: rgba(45, 45, 45, 0.8) !important;
+        border-color: #F4D03F !important;
+    }
+    
+    .stSidebar .stRadio > div > label[data-checked="true"] {
+        background: linear-gradient(135deg, #D4AF37 0%, #F4D03F 100%) !important;
+        color: #1a1a1a !important;
+        border-color: #F4D03F !important;
     }
     
     /* Input fields */
@@ -692,7 +727,7 @@ num_travelers = st.slider(
 # Sidebar Setup with Enhanced Styling
 st.sidebar.markdown("""
 <div style="
-    background: #1a1a1a;
+    background: #000000;
     border: 2px solid #D4AF37;
     padding: 1rem 0.8rem;
     border-radius: 12px;
@@ -709,7 +744,7 @@ st.sidebar.markdown("""
 st.sidebar.markdown("""
 <div style="margin: 1rem 0;">
     <div style="
-        background: #1a1a1a;
+        background: #000000;
         border: 2px solid #D4AF37;
         border-radius: 12px;
         padding: 1rem;
@@ -735,7 +770,7 @@ budget = st.sidebar.radio(
 st.sidebar.markdown("""
 <div style="margin: 1rem 0;">
     <div style="
-        background: #1a1a1a;
+        background: #000000;
         border: 2px solid #D4AF37;
         border-radius: 12px;
         padding: 1rem;
@@ -761,7 +796,7 @@ flight_class = st.sidebar.radio(
 # Compact Travel Inspiration Box
 st.sidebar.markdown("""
 <div style="
-    background: #1a1a1a;
+    background: #000000;
     border: 2px solid #D4AF37;
     border-radius: 15px;
     padding: 1.5rem;
@@ -800,12 +835,8 @@ def fetch_amadeus_flights(source, destination, departure_date, return_date, adul
     try:
         # Ensure IATA codes are valid 3-letter codes
         if len(source) != 3 or len(destination) != 3:
-            st.warning(f"Invalid IATA codes: {source} -> {destination}")
             return []
             
-        # Show that we're using production API
-        st.info(f"🌐 **Searching Amadeus Production API** (api.amadeus.com) for {source} → {destination}")
-        
         response = amadeus.shopping.flight_offers_search.get(
             originLocationCode=source,
             destinationLocationCode=destination,
@@ -817,15 +848,10 @@ def fetch_amadeus_flights(source, destination, departure_date, return_date, adul
         )
         
         if response.data:
-            st.success(f"✅ **Production API Response:** Found {len(response.data)} real flight offers from Amadeus")
-        
-        return response.data
+            return response.data
     except ResponseError as error:
-        st.error(f"Amadeus Flight API Error: {error}")
-        st.info("Using fallback data - some features may be limited")
         return generate_mock_flight_data(source, destination, departure_date, return_date, adults)
     except Exception as e:
-        st.error(f"Flight search error: {str(e)}")
         return generate_mock_flight_data(source, destination, departure_date, return_date, adults)
 
 def generate_mock_flight_data(source, destination, departure_date, return_date, adults=1):
@@ -1017,169 +1043,20 @@ def get_airport_display_name(airport_code):
     }
     return location_names.get(airport_code, f"{airport_code} Airport")
 
-# Kiwi.com Cheap Flights API Integration (Primary flight source)
-@st.cache_data(ttl=300)  # 5 minute cache
-def fetch_kiwi_flights(source_iata, destination_iata, departure_date, return_date, departure_time_pref="Any Time", return_time_pref="Any Time", num_travelers=1):
-    """Fetch flight data from Kiwi.com API with time preferences - Primary flight source"""
-    try:
-        import requests
-        
-        # Kiwi.com RapidAPI endpoint (correct endpoint found)
-        url = "https://kiwi-com-cheap-flights.p.rapidapi.com/round-trip"
-        
-        headers = {
-            "X-RapidAPI-Key": config.RAPIDAPI_KEY or "demo_key",
-            "X-RapidAPI-Host": "kiwi-com-cheap-flights.p.rapidapi.com"
-        }
-        
-        # Convert time preferences to hour ranges for Kiwi API
-        time_ranges = {
-            "🌅 Morning (06:00-12:00)": {"departure_times_from": "06:00", "departure_times_to": "12:00"},
-            "☀️ Afternoon (12:00-18:00)": {"departure_times_from": "12:00", "departure_times_to": "18:00"}, 
-            "🌙 Evening (18:00-00:00)": {"departure_times_from": "18:00", "departure_times_to": "23:59"},
-            "🦉 Late Night (00:00-06:00)": {"departure_times_from": "00:00", "departure_times_to": "06:00"},
-            "⏰ Any Time": {}
-        }
-        
-        departure_time_filter = time_ranges.get(departure_time_pref, {})
-        return_time_filter = time_ranges.get(return_time_pref, {})
-        
-        # Try multiple parameter formats for better compatibility
-        parameter_sets = [
-            # Format 1: Standard airport codes
-            {
-                "from": source_iata,
-                "to": destination_iata,
-                "departure": str(departure_date),
-                "return": str(return_date),
-                "adults": str(num_travelers),
-                "currency": "USD",
-                "limit": "10"
-            },
-            # Format 2: With country codes for South African routes
-            {
-                "fly_from": f"{source_iata}",
-                "fly_to": f"{destination_iata}",
-                "date_from": str(departure_date),
-                "date_to": str(departure_date),
-                "return_from": str(return_date),
-                "return_to": str(return_date),
-                "adults": num_travelers,
-                "curr": "USD",
-                "limit": 10
-            },
-            # Format 3: City-based search
-            {
-                "origin": source_iata,
-                "destination": destination_iata,
-                "departure_date": str(departure_date),
-                "return_date": str(return_date),
-                "passengers": str(num_travelers),
-                "currency": "USD"
-            }
-        ]
-        
-        st.info(f"🌐 Searching Kiwi.com for flights from {source_iata} to {destination_iata}")
-        
-        # Try each parameter format
-        for i, querystring in enumerate(parameter_sets, 1):
-            try:
-                st.info(f"🔄 Trying parameter format {i}/3...")
-                response = requests.get(url, headers=headers, params=querystring, timeout=15)
-                
-                if response.status_code == 200:
-                    data = response.json()
-                    
-                    # Parse Kiwi.com response - they use 'itineraries' not 'data'
-                    flights = []
-                    flight_data_array = data.get("itineraries", data.get("data", []))
-                    
-                    if len(flight_data_array) > 0:
-                        st.success(f"✅ Found flights using parameter format {i}")
-                        
-                        for flight_data in flight_data_array[:5]:  # Get top 5 flights
-                            
-                            # Handle different Kiwi.com response formats
-                            if "route" in flight_data:
-                                # Format 1: Traditional Kiwi format
-                                route = flight_data.get("route", [])
-                                if not route:
-                                    continue
-                                
-                                departure_flight = route[0]
-                                departure_time = departure_flight.get("local_departure", "")[:16].replace("T", " ")
-                                arrival_time = departure_flight.get("local_arrival", "")[:16].replace("T", " ")
-                                airline = departure_flight.get("airline", "Various Airlines")
-                                
-                                duration_sec = flight_data.get("duration", {}).get("total", 0)
-                                duration_hours = duration_sec // 3600
-                                duration_mins = (duration_sec % 3600) // 60
-                                duration = f"{duration_hours}h {duration_mins}m"
-                                
-                            else:
-                                # Format 2: Alternative Kiwi format
-                                departure_time = flight_data.get("departure_time", flight_data.get("departure", "N/A"))
-                                arrival_time = flight_data.get("arrival_time", flight_data.get("arrival", "N/A"))
-                                airline = flight_data.get("airline", flight_data.get("carrier", "Various Airlines"))
-                                duration = flight_data.get("duration", "N/A")
-                            
-                            # Get price
-                            price = flight_data.get("price", 0)
-                            if isinstance(price, (int, float)):
-                                price_str = f"${price:.0f}"
-                            else:
-                                price_str = str(price)
-                            
-                            # Generate Skyscanner booking URL with traveler count
-                            skyscanner_url = f"https://www.skyscanner.com/transport/flights/{source_iata}/{destination_iata}/{departure_date}/{return_date}/?adults={num_travelers}&children=0&infants=0&cabinclass=economy"
-                            
-                            flight_info = {
-                                "airline": airline,
-                                "price": price_str,
-                                "departure_time": departure_time,
-                                "arrival_time": arrival_time,
-                                "duration": duration,
-                                "booking_url": skyscanner_url,  # Direct to Skyscanner
-                                "stops": len(flight_data.get("route", [])) - 1 if "route" in flight_data else 0,
-                                "source": "Kiwi.com → Skyscanner",
-                                "flight_number": flight_data.get("flight_no", ""),
-                                "aircraft": flight_data.get("vehicle_type", ""),
-                                "booking_token": flight_data.get("booking_token", "")
-                            }
-                            flights.append(flight_info)
-                        
-                        if flights:
-                            st.success(f"✈️ Found {len(flights)} flights from Kiwi.com")
-                            return flights
-                    else:
-                        st.info(f"No flights found with parameter format {i}, trying next...")
-                        continue
-                        
-                elif response.status_code == 429:
-                    st.warning("⚠️ Rate limit reached for Kiwi.com API")
-                    break
-                else:
-                    st.info(f"Format {i} returned status {response.status_code}, trying next...")
-                    continue
-                    
-            except Exception as e:
-                st.info(f"Format {i} failed: {str(e)[:50]}..., trying next...")
-                continue
-        
-        # If no flights found with any format, try popular alternative routes
-        st.warning("⚠️ No flights found with direct search. Checking alternative routes...")
-        
-        # For South African domestic routes, suggest alternatives
-        if source_iata in ["DUR", "JNB", "CPT"] and destination_iata in ["DUR", "JNB", "CPT"]:
-            st.info("💡 For South African domestic flights, trying major airlines...")
-            return generate_south_african_domestic_flights(source_iata, destination_iata, departure_date, return_date)
-        
-        st.warning("⚠️ No flights found matching your criteria from Kiwi.com")
-        return generate_enhanced_flight_mock_data(source_iata, destination_iata, departure_time_pref, return_time_pref)
-            
-    except Exception as e:
-        st.info(f"Using demo flight data (Kiwi.com: {str(e)[:50]}...)")
-        return generate_enhanced_flight_mock_data(source_iata, destination_iata, departure_time_pref, return_time_pref)
+# Streamlined flight search - direct to Skyscanner for production
+def get_flight_booking_url(source_iata, destination_iata, departure_date, return_date, num_travelers=1):
+    """Generate Skyscanner booking URL for flights"""
+    return f"https://www.skyscanner.com/transport/flights/{source_iata}/{destination_iata}/{departure_date.strftime('%y%m%d')}/{return_date.strftime('%y%m%d')}/?adults={num_travelers}&children=0&infants=0&cabinclass=economy"
+
+def generate_flight_summary(source_iata, destination_iata, departure_date, return_date, num_travelers):
+    """Generate a clean flight summary for display"""
+    travelers_text = "1 traveler" if num_travelers == 1 else f"{num_travelers} travelers"
+    return {
+        'route': f"{source_iata} ➜ {destination_iata} ➜ {source_iata}",
+        'dates': f"{departure_date.strftime('%b %d')} - {return_date.strftime('%b %d, %Y')}",
+        'travelers': travelers_text,
+        'booking_url': get_flight_booking_url(source_iata, destination_iata, departure_date, return_date, num_travelers)
+    }
 
 # Skyscanner API Integration for Enhanced Flight Search
 @st.cache_data(ttl=300)  # 5 minute cache
@@ -1348,14 +1225,12 @@ def fetch_google_restaurants(location, cuisine_type="", budget="", travel_theme=
     
     # Use Google Places API when available, fallback to mock data
     if not should_use_google_places():
-        st.info("Google Places API not configured. Using sample restaurant data.")
         return generate_mock_restaurants(location, cuisine_type, budget)
     
     try:
         # First, get the location coordinates
         geocode_result = gmaps.geocode(location)
         if not geocode_result:
-            st.warning(f"Could not find coordinates for {location}")
             return generate_mock_restaurants(location, cuisine_type, budget)
         
         location_coords = geocode_result[0]['geometry']['location']
@@ -1422,21 +1297,18 @@ def fetch_google_restaurants(location, cuisine_type="", budget="", travel_theme=
         return restaurants
         
     except Exception as error:
-        st.error(f"Google Places Restaurant Search Error: {error}")
         return []
 
 def fetch_business_venues(location):
     """Fetch business-friendly venues like coworking spaces, conference centers, meeting rooms"""
     
     if not should_use_google_places():
-        st.info("Google Places API not configured. Using sample business venue data.")
         return generate_mock_business_venues(location)
     
     try:
         # First, get the location coordinates
         geocode_result = gmaps.geocode(location)
         if not geocode_result:
-            st.warning(f"Could not find coordinates for {location}")
             return generate_mock_business_venues(location)
 
         location_coords = geocode_result[0]['geometry']['location']
@@ -1500,7 +1372,6 @@ def fetch_business_venues(location):
         return list(sorted_venues)[:4]  # Return top 4 business venues
 
     except Exception as error:
-        st.error(f"Google Places Business Venues Search Error: {error}")
         return generate_mock_business_venues(location)
 
 def generate_mock_business_venues(location):
@@ -1651,7 +1522,6 @@ def fetch_google_attractions(location, activity_preferences=""):
         return list(sorted_attractions)[:3]
         
     except Exception as error:
-        st.error(f"Google Places Attractions Search Error: {error}")
         return []
 
 def fetch_google_local_info(location):
@@ -1726,7 +1596,6 @@ def fetch_google_local_info(location):
         
         return all_info
     except Exception as error:
-        st.error(f"Google Local Info Search Error: {error}")
         return []
 
 def extract_rating_from_snippet(snippet):
@@ -1870,7 +1739,6 @@ def fetch_live_events(location, departure_date, return_date):
         return all_events[:12]  # Return top 12 events across all categories
         
     except Exception as error:
-        st.error(f"Live Events Search Error: {error}")
         return []
 
 # AI Agents
@@ -1933,55 +1801,69 @@ if st.button("🚀 Generate Travel Plan") or st.session_state.plan_generated:
             if st.button("🔄 Generate New Plan", key="new_plan_btn_displayed"):
                 st.session_state.plan_generated = False
                 st.rerun()
-    with st.spinner("✈️ Searching flight options..."):
-        # Use Kiwi.com as primary flight source for pricing data
-        st.info(f"🕐 Searching flights with preferences: Departure {departure_time_pref}, Return {return_time_pref}")
+    
+    # Initialize progress tracking
+    progress_container = st.container()
+    
+    with progress_container:
+        # Create a progress bar
+        progress_bar = st.progress(0)
+        status_text = st.empty()
         
-        all_flights = []
+        # Stage 1: Flight Information
+        status_text.text("🛫 Preparing flight booking information...")
+        progress_bar.progress(10)
         
-        # Primary search: Kiwi.com (provides good pricing data)
-        kiwi_flights = fetch_kiwi_flights(source_iata, destination_iata, departure_date, return_date, departure_time_pref, return_time_pref, num_travelers)
-        if kiwi_flights:
-            all_flights.extend(kiwi_flights)
-            st.success(f"✅ Found {len(kiwi_flights)} flight options")
-        else:
-            st.info("ℹ️ No direct flights found, but Skyscanner will show all available options")
+        # Generate flight booking info (no API calls, direct to Skyscanner)
+        flight_summary = generate_flight_summary(source_iata, destination_iata, departure_date, return_date, num_travelers)
         
-        # Note: All booking redirects to Skyscanner for actual purchases
-
-    # Car rental search using streamlined approach (no API needed)
-    st.info("🚗 Car rental options available via Skyscanner")
-    car_rental_data = []  # No API data needed - direct to Skyscanner
-
-    with st.spinner("🍽️ Finding best restaurants with Google..."):
+        # Stage 2: Restaurant Search
+        status_text.text("🍽️ Discovering local restaurants...")
+        progress_bar.progress(25)
+        
         # Use Google for restaurants (better local business data)
         restaurant_data = fetch_google_restaurants(destination, budget=budget, travel_theme=travel_theme)
 
-    # Add business venues search for business trips
-    business_venues = []
-    if "Business" in travel_theme:
-        with st.spinner("💼 Finding business venues and coworking spaces..."):
+        # Stage 3: Business Venues (if applicable)
+        if "Business" in travel_theme:
+            status_text.text("💼 Finding business venues...")
+            progress_bar.progress(40)
             business_venues = fetch_business_venues(destination)
+        else:
+            progress_bar.progress(40)
+            business_venues = []
 
-    with st.spinner("🎯 Discovering attractions with Google..."):
+        # Stage 4: Attractions
+        status_text.text("🎯 Exploring attractions and activities...")
+        progress_bar.progress(55)
+        
         # Use Google for tourist attractions (comprehensive local info)
         attraction_data = fetch_google_attractions(destination, activity_preferences)
 
-    with st.spinner("🎉 Finding live events during your trip..."):
+        # Stage 5: Live Events
+        status_text.text("🎉 Checking for live events...")
+        progress_bar.progress(70)
+        
         # Fetch live events happening during travel dates
         live_events = fetch_live_events(destination, departure_date, return_date)
 
-    with st.spinner("ℹ️ Gathering local information with Google..."):
+        # Stage 6: Local Information
+        status_text.text("ℹ️ Gathering local insights...")
+        progress_bar.progress(80)
+        
         # Use Google for local culture, weather, safety info
         local_info = fetch_google_local_info(destination)
 
-    # AI Processing with combined data
-    # Calculate trip duration from dates
-    trip_duration = (return_date - departure_date).days
-    if trip_duration <= 0:
-        trip_duration = 1  # Minimum 1 day trip
+        # Stage 7: AI Research
+        status_text.text("🔍 Analyzing destination data...")
+        progress_bar.progress(90)
+        
+        # AI Processing with combined data
+        # Calculate trip duration from dates
+        trip_duration = (return_date - departure_date).days
+        if trip_duration <= 0:
+            trip_duration = 1  # Minimum 1 day trip
 
-    with st.spinner("🔍 Creating comprehensive travel insights..."):
         # Combine all data for AI processing
         combined_travel_data = {
             'restaurants': restaurant_data,
@@ -1989,128 +1871,91 @@ if st.button("🚀 Generate Travel Plan") or st.session_state.plan_generated:
             'local_info': local_info,
             'live_events': live_events
         }
-        
-        research_prompt = (
-            f"Based on real-time data for {destination}, provide comprehensive travel insights:\n"
-            f"- Popular Attractions: {', '.join([a.get('name', 'Attraction') for a in attraction_data[:5]]) if attraction_data else 'Research local attractions'}\n"
-            f"- Upcoming Events: {', '.join([e.get('title', 'Event') for e in live_events[:3]]) if live_events else 'Check local event listings'}\n"
-            f"- Local Highlights: {', '.join([info.get('category', 'Local info') for info in local_info[:3]]) if local_info else 'General destination information'}\n"
-            f"Create a detailed guide covering:\n"
-            f"1. Must-visit attractions and activities for a {travel_theme.lower()} trip\n"
-            f"2. Live events and happenings during travel dates\n"
-            f"3. Local culture and customs\n"
-            f"4. Weather and best time to visit\n"
-            f"5. Safety tips and transportation\n"
-            f"6. Recommendations based on traveler preferences: {activity_preferences}\n"
-            f"Trip duration: {trip_duration} days, Budget: {budget}, Flight Class: {flight_class}\n"
-            f"Focus on providing practical, actionable travel advice without technical data."
-        )
-        research_results = researcher.run(research_prompt, stream=False)
+    
+    research_prompt = (
+        f"Based on real-time data for {destination}, provide comprehensive travel insights:\n"
+        f"- Popular Attractions: {', '.join([a.get('name', 'Attraction') for a in attraction_data[:5]]) if attraction_data else 'Research local attractions'}\n"
+        f"- Upcoming Events: {', '.join([e.get('title', 'Event') for e in live_events[:3]]) if live_events else 'Check local event listings'}\n"
+        f"- Local Highlights: {', '.join([info.get('category', 'Local info') for info in local_info[:3]]) if local_info else 'General destination information'}\n"
+        f"Create a detailed guide covering:\n"
+        f"1. Must-visit attractions and activities for a {travel_theme.lower()} trip\n"
+        f"2. Live events and happenings during travel dates\n"
+        f"3. Local culture and customs\n"
+        f"4. Weather and best time to visit\n"
+        f"5. Safety tips and transportation\n"
+        f"6. Recommendations based on traveler preferences: {activity_preferences}\n"
+        f"Trip duration: {trip_duration} days, Budget: {budget}, Flight Class: {flight_class}\n"
+        f"Focus on providing practical, actionable travel advice without technical data."
+    )
+    research_results = researcher.run(research_prompt, stream=False)
 
-    with st.spinner("🗺️ Creating your personalized itinerary..."):
-        # Create a clean summary for the AI instead of raw JSON
-        if all_flights:
-            try:
-                first_flight = all_flights[0]
-                price = first_flight.get('price', 'N/A')
-                airline = first_flight.get('airline', 'Various Airlines')
-                flight_summary = f"Available flights from {source_iata} to {destination_iata}, starting from {price} with {airline}"
-            except (KeyError, IndexError):
-                flight_summary = f"Flight options available with {len(all_flights)} choices"
-        else:
-            flight_summary = "Flight search results will be available via Skyscanner"
-        
-        car_rental_summary = "Car rental options available via Skyscanner"
-        
-        restaurant_summary = f"Featured restaurants include {', '.join([r.get('name', 'Restaurant') for r in restaurant_data[:3]]) if restaurant_data else 'local dining options'}"
-        
-        attraction_summary = f"Top attractions include {', '.join([a.get('name', 'Attraction') for a in attraction_data[:3]]) if attraction_data else 'local points of interest'}"
-        
-        events_summary = f"Live events during your visit: {', '.join([e.get('title', 'Various events') for e in live_events[:3]]) if live_events else 'Check local listings'}"
-        
-        planning_prompt = (
-            f"Create a detailed {trip_duration}-day itinerary for a {travel_theme.lower()} trip to {destination}. "
-            f"Use this information to create recommendations:\n\n"
-            f"AVAILABLE SERVICES:\n"
-            f"- Flights: {flight_summary}\n"
-            f"- Transportation: {car_rental_summary}\n"
-            f"- Dining: {restaurant_summary}\n"
-            f"- Attractions: {attraction_summary}\n"
-            f"- Events: {events_summary}\n\n"
-            f"TRAVELER PREFERENCES:\n"
-            f"- Activities: {activity_preferences}\n"
-            f"- Budget: {budget}\n"
-            f"- Flight Class: {flight_class}\n"
-            f"- Departure Time Preference: {departure_time_pref}\n"
-            f"- Return Time Preference: {return_time_pref}\n\n"
-            f"- Flight Class: {flight_class}\n\n"
-            f"RESEARCH INSIGHTS:\n{research_results.content}\n\n"
-            f"CRITICAL FORMATTING INSTRUCTIONS:\n"
-            f"- Use ONLY plain text and basic markdown formatting\n"
-            f"- NO HTML tags whatsoever (no <div>, <span>, <style>, etc.)\n"
-            f"- NO CSS styling or HTML formatting\n"
-            f"- Use simple markdown: # for headers, ** for bold, - for bullets\n"
-            f"- Create clear, readable text that displays properly in a travel app\n"
-            f"- Focus on practical travel information with specific times and locations\n\n"
-            f"Create a detailed day-by-day itinerary including recommended restaurants, attractions, and events from the available data."
-        )
-        itinerary = planner.run(planning_prompt, stream=False)
+    # Stage 8: Creating Itinerary
+    status_text.text("🗺️ Creating your personalized itinerary...")
+    progress_bar.progress(95)
+
+    # Create a clean summary for the AI instead of raw JSON
+    flight_info_summary = f"Flight booking available from {source_iata} to {destination_iata}, check Skyscanner for current prices and availability"
+    car_rental_summary = "Car rental options available via Skyscanner"
+    restaurant_summary = f"Featured restaurants include {', '.join([r.get('name', 'Restaurant') for r in restaurant_data[:3]]) if restaurant_data else 'local dining options'}"
+    attraction_summary = f"Top attractions include {', '.join([a.get('name', 'Attraction') for a in attraction_data[:3]]) if attraction_data else 'local points of interest'}"
+    events_summary = f"Live events during your visit: {', '.join([e.get('title', 'Various events') for e in live_events[:3]]) if live_events else 'Check local listings'}"
+    
+    planning_prompt = (
+        f"Create a detailed {trip_duration}-day itinerary for a {travel_theme.lower()} trip to {destination}. "
+        f"Use this information to create recommendations:\n\n"
+        f"AVAILABLE SERVICES:\n"
+        f"- Flights: {flight_info_summary}\n"
+        f"- Transportation: {car_rental_summary}\n"
+        f"- Dining: {restaurant_summary}\n"
+        f"- Attractions: {attraction_summary}\n"
+        f"- Events: {events_summary}\n\n"
+        f"TRAVELER PREFERENCES:\n"
+        f"- Activities: {activity_preferences}\n"
+        f"- Budget: {budget}\n"
+        f"- Flight Class: {flight_class}\n"
+        f"- Departure Time Preference: {departure_time_pref}\n"
+        f"- Return Time Preference: {return_time_pref}\n\n"
+        f"RESEARCH INSIGHTS:\n{research_results.content}\n\n"
+        f"CRITICAL FORMATTING INSTRUCTIONS:\n"
+        f"- Use ONLY plain text and basic markdown formatting\n"
+        f"- NO HTML tags whatsoever (no <div>, <span>, <style>, etc.)\n"
+        f"- NO CSS styling or HTML formatting\n"
+        f"- Use simple markdown: # for headers, ** for bold, - for bullets\n"
+        f"- Create clear, readable text that displays properly in a travel app\n"
+        f"- Focus on practical travel information with specific times and locations\n\n"
+        f"Create a detailed day-by-day itinerary including recommended restaurants, attractions, and events from the available data."
+    )
+    itinerary = planner.run(planning_prompt, stream=False)
+
+    # Final stage: Complete
+    status_text.text("✅ Travel plan ready!")
+    progress_bar.progress(100)
+    
+    # Clear the progress indicators after a brief moment
+    import time
+    time.sleep(1)
+    progress_container.empty()
 
     # Display Results
     st.subheader("✈️ Flight Booking")
-    st.info(f"🕐 Preferred departure: {departure_time_pref} | Return: {return_time_pref}")
     
-    if all_flights:
-        # Get price range from available flights
-        try:
-            def get_price_numeric(flight):
-                price_str = flight.get("price", "$999")
-                return float(price_str.replace("$", "").replace(",", ""))
-            
-            prices = [get_price_numeric(flight) for flight in all_flights]
-            min_price = min(prices)
-            max_price = max(prices)
-            
-            if min_price == max_price:
-                price_range = f"from ${min_price:.0f}"
-            else:
-                price_range = f"${min_price:.0f} - ${max_price:.0f}"
-        except:
-            price_range = "Various prices available"
-        
-        # Generate Skyscanner URL for direct booking with traveler count
-        skyscanner_url = f"https://www.skyscanner.com/transport/flights/{source_iata}/{destination_iata}/{departure_date.strftime('%y%m%d')}/{return_date.strftime('%y%m%d')}/?adults={num_travelers}&children=0&infants=0&cabinclass=economy"
-        
-        st.success(f"✅ Found {len(all_flights)} flight options available")
-        
-        # Show traveler info in display
-        travelers_text = "1 traveler" if num_travelers == 1 else f"{num_travelers} travelers"
-        
-        st.markdown(f"""
-        ### 🎯 Ready to Book Your Flight?
-        
-        **📍 Route:** {source_iata} ➜ {destination_iata} ➜ {source_iata}  
-        **📅 Dates:** {departure_date.strftime('%b %d')} - {return_date.strftime('%b %d, %Y')}  
-        **👥 Travelers:** {travelers_text}  
-        **💰 Price Range:** {price_range}  
-        **✈️ Airlines:** Multiple carriers available  
-        
-        ---
-        
-        ### 🌟 **[View & Book All Flight Options on Skyscanner]({skyscanner_url})**
-        
-        *Click the link above to see all available flights for your dates and book directly with your preferred airline.*
-        """)
-    else:
-        st.warning("⚠️ No flight data available. Please try different dates or destinations.")
-        
-        # Still provide Skyscanner link even if no flights found
-        travelers_text = "1 traveler" if num_travelers == 1 else f"{num_travelers} travelers"
-        skyscanner_url = f"https://www.skyscanner.com/transport/flights/{source_iata}/{destination_iata}/{departure_date.strftime('%y%m%d')}/{return_date.strftime('%y%m%d')}/?adults={num_travelers}&children=0&infants=0&cabinclass=economy"
-        st.markdown(f"""
-        ### 📍 Search Manually on Skyscanner
-        **[🔍 Search flights for {source_iata} to {destination_iata} ({travelers_text})]({skyscanner_url})**
-        """)
+    # Clean flight booking section without API complexity
+    travelers_text = "1 traveler" if num_travelers == 1 else f"{num_travelers} travelers"
+    
+    st.markdown(f"""
+    ### 🎯 Ready to Book Your Flight?
+    
+    **📍 Route:** {flight_summary['route']}  
+    **📅 Dates:** {flight_summary['dates']}  
+    **👥 Travelers:** {travelers_text}  
+    **🕐 Preferred Times:** Departure {departure_time_pref}, Return {return_time_pref}  
+    
+    ---
+    
+    ### 🌟 **[View & Book All Flight Options on Skyscanner]({flight_summary['booking_url']})**
+    
+    *Click the link above to see all available flights for your dates and book directly with your preferred airline.*
+    """)
 
     # Car Rental Booking Section
     st.subheader("🚗 Car Rental Booking")
@@ -2187,7 +2032,7 @@ if st.button("🚀 Generate Travel Plan") or st.session_state.plan_generated:
                 """)
                 st.markdown("---")
     else:
-        st.info("🍽️ Restaurant search powered by Google Places API")
+        pass
 
     # Display business venues for business trips
     if "Business" in travel_theme and business_venues:
@@ -2226,7 +2071,7 @@ if st.button("🚀 Generate Travel Plan") or st.session_state.plan_generated:
                 
                 if idx < len(business_venues):
                     st.markdown("---")
-        st.info("💼 Business venues powered by Google Places API")
+        pass
 
     # Display Google-sourced attractions with direct booking links
     st.subheader("🎯 Top Attractions & Activities")
@@ -2272,7 +2117,7 @@ if st.button("🚀 Generate Travel Plan") or st.session_state.plan_generated:
                 
                 st.markdown("---")
     else:
-        st.info("🎯 Attractions powered by Google Places API")
+        pass
 
     # Display live events during the trip
     st.markdown('<div class="section-header">🎉 Live Events During Your Trip</div>', unsafe_allow_html=True)
@@ -2323,7 +2168,7 @@ if st.button("🚀 Generate Travel Plan") or st.session_state.plan_generated:
             """)
             st.markdown("---")
     else:
-        st.info("🎉 Live events powered by Google Search")
+        pass
 
     # Display local information with summaries and dropdowns
     st.markdown('<div class="section-header">ℹ️ Local Travel Information (Quick Summaries)</div>', unsafe_allow_html=True)
@@ -2352,12 +2197,8 @@ if st.button("🚀 Generate Travel Plan") or st.session_state.plan_generated:
             
             st.markdown("---")
     else:
-        st.info("ℹ️ Local information powered by Google Search")
+        pass
 
     st.markdown('<div class="section-header">🗺️ Your Personalized Itinerary</div>', unsafe_allow_html=True)
     st.markdown(itinerary.content, unsafe_allow_html=True)
-
-    st.success("✅ Travel plan generated successfully!")
-
-
 
