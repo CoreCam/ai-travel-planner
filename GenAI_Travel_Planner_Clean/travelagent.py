@@ -16,9 +16,106 @@ from agno.models.google import Gemini
 from datetime import datetime
 from config import config
 
-# Initialize session state to keep travel plan visible
+# Initialize session state for email access and travel plan
+if 'email_verified' not in st.session_state:
+    st.session_state.email_verified = False
+if 'user_email' not in st.session_state:
+    st.session_state.user_email = ""
 if 'plan_generated' not in st.session_state:
     st.session_state.plan_generated = False
+
+def validate_email(email):
+    """Validate email format"""
+    pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    return re.match(pattern, email) is not None
+
+def save_user_email(email):
+    """Save user email to analytics"""
+    try:
+        # Save to session state for Streamlit Cloud compatibility
+        if 'collected_emails' not in st.session_state:
+            st.session_state.collected_emails = []
+        
+        email_data = {
+            'email': email,
+            'login_time': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            'session_type': 'Email_Access'
+        }
+        
+        # Add to session state if not already there
+        existing_emails = [item['email'] for item in st.session_state.collected_emails]
+        if email not in existing_emails:
+            st.session_state.collected_emails.append(email_data)
+        
+        # Try to save to files (works locally, fails silently on Streamlit Cloud)
+        try:
+            from pathlib import Path
+            import csv
+            
+            # Create analytics directory if it doesn't exist
+            Path("analytics").mkdir(exist_ok=True)
+            
+            # Save to CSV for analytics
+            csv_file = "analytics/user_sessions.csv"
+            file_exists = Path(csv_file).exists()
+            
+            with open(csv_file, 'a', newline='', encoding='utf-8') as file:
+                writer = csv.writer(file)
+                if not file_exists:
+                    writer.writerow(['Email', 'Login_Time', 'Session_Type'])
+                writer.writerow([email, datetime.now().strftime('%Y-%m-%d %H:%M:%S'), 'Email_Access'])
+            
+            # Also save to user_data for email collection
+            Path("user_data").mkdir(exist_ok=True)
+            users_file = "user_data/users.json"
+            
+            users_data = {}
+            if Path(users_file).exists():
+                with open(users_file, 'r') as f:
+                    users_data = json.load(f)
+            
+            if email not in users_data:
+                users_data[email] = {
+                    'email': email,
+                    'first_login': datetime.now().isoformat(),
+                    'login_count': 1
+                }
+            else:
+                users_data[email]['login_count'] += 1
+                users_data[email]['last_login'] = datetime.now().isoformat()
+            
+            with open(users_file, 'w') as f:
+                json.dump(users_data, f, indent=2)
+        except Exception:
+            pass  # Fail silently on Streamlit Cloud
+            json.dump(users_data, f, indent=2)
+        
+        return True
+    except Exception as e:
+        st.error(f"Error saving email: {e}")
+        return False
+
+def track_user_action(action, details=""):
+    """Track user actions for analytics"""
+    try:
+        from pathlib import Path
+        import csv
+        
+        Path("analytics").mkdir(exist_ok=True)
+        csv_file = "analytics/user_sessions.csv"
+        file_exists = Path(csv_file).exists()
+        
+        with open(csv_file, 'a', newline='', encoding='utf-8') as file:
+            writer = csv.writer(file)
+            if not file_exists:
+                writer.writerow(['Email', 'Timestamp', 'Action', 'Details'])
+            
+            email = st.session_state.get('user_email', 'unknown')
+            timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            writer.writerow([email, timestamp, action, details])
+            
+    except Exception:
+        pass  # Fail silently so analytics don't break the app
 
 def verify_website(url, timeout=3):
     """Check if a website URL is accessible"""
@@ -41,6 +138,92 @@ def get_maps_link(name, address=""):
 if not config.validate_required_keys()[0]:
     config.display_setup_instructions()
     st.stop()
+
+# Email Sign-On Gate
+def show_email_signin():
+    """Display email sign-in form"""
+    st.markdown("""
+    <div style="text-align: center; padding: 2rem; background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%); 
+                border: 3px solid #D4AF37; border-radius: 20px; margin: 2rem 0;">
+        <h1 style="color: #D4AF37; font-size: 3rem; margin-bottom: 1rem;">🌍 AI Travel Planner</h1>
+        <h3 style="color: #ffffff; margin-bottom: 2rem;">Enter your email to access the planner</h3>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    with st.form("email_signin"):
+        email_input = st.text_input(
+            "📧 Email Address", 
+            placeholder="your.email@example.com",
+            help="Enter your email to access the AI Travel Planner"
+        )
+        
+        submit_button = st.form_submit_button("🚀 Access Travel Planner", type="primary", use_container_width=True)
+        
+        if submit_button:
+            if email_input:
+                if validate_email(email_input):
+                    # Save email and grant access
+                    if save_user_email(email_input):
+                        st.session_state.email_verified = True
+                        st.session_state.user_email = email_input
+                        st.success("✅ Welcome! Access granted!")
+                        st.rerun()
+                    else:
+                        st.warning("⚠️ Could not save email, but access granted anyway!")
+                        st.session_state.email_verified = True
+                        st.session_state.user_email = email_input
+                        st.rerun()
+                else:
+                    st.error("❌ Please enter a valid email address")
+            else:
+                st.error("❌ Please enter your email address")
+
+# Check if user needs to sign in
+if not st.session_state.email_verified:
+    show_email_signin()
+    st.stop()
+
+# Track user access to main app
+track_user_action("app_access", "Main travel planner accessed")
+
+# User is signed in - show welcome message in sidebar
+st.sidebar.markdown(f"""
+<div style="background: #000000; border: 2px solid #D4AF37; padding: 1rem; border-radius: 10px; margin-bottom: 1rem; text-align: center;">
+    <h4 style="color: #D4AF37; margin: 0;">👋 Welcome!</h4>
+    <p style="color: #ffffff; margin: 0; font-size: 0.9rem;">{st.session_state.user_email}</p>
+</div>
+""", unsafe_allow_html=True)
+
+# Admin access for analytics dashboard
+admin_emails = ["cmrnmccarthy@gmail.com", "declan@revgrowth.co.za"]  # Updated admin emails
+if st.session_state.user_email.lower() in [email.lower() for email in admin_emails]:
+    st.sidebar.markdown("### 👑 Admin Tools")
+    
+    if st.sidebar.button("📊 Analytics Dashboard", help="View user analytics and email data"):
+        st.sidebar.success("Analytics dashboard available!")
+        st.sidebar.info("Run: `streamlit run analytics_dashboard.py` in a new terminal")
+    
+    # Email export feature for Streamlit Cloud
+    if st.sidebar.button("📧 Export Session Emails", help="Download emails collected this session"):
+        if 'collected_emails' in st.session_state and st.session_state.collected_emails:
+            import pandas as pd
+            df = pd.DataFrame(st.session_state.collected_emails)
+            csv = df.to_csv(index=False)
+            st.sidebar.download_button(
+                label="💾 Download Email List",
+                data=csv,
+                file_name=f"session_emails_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
+                mime="text/csv"
+            )
+        else:
+            st.sidebar.info("No emails collected this session")
+
+# Sign out button
+if st.sidebar.button("🚪 Sign Out", help="Sign out and return to email entry"):
+    st.session_state.email_verified = False
+    st.session_state.user_email = ""
+    st.session_state.plan_generated = False
+    st.rerun()
 
 # Set environment variables for libraries that need them
 os.environ["GOOGLE_API_KEY"] = config.GOOGLE_API_KEY
@@ -118,6 +301,22 @@ st.markdown("""
     /* Sidebar section background */
     .stSidebar > div {
         background: #000000 !important;
+    }
+    
+    /* All sidebar text white */
+    .stSidebar * {
+        color: #ffffff !important;
+    }
+    
+    /* Sidebar labels and text */
+    .stSidebar .stSelectbox label,
+    .stSidebar .stRadio label,
+    .stSidebar .stSlider label,
+    .stSidebar .stTextInput label,
+    .stSidebar .stNumberInput label,
+    .stSidebar .stDateInput label {
+        color: #ffffff !important;
+        font-weight: 500 !important;
     }
     
     /* Sidebar radio button and text styling */
@@ -1787,10 +1986,13 @@ if st.button("🚀 Generate Travel Plan") or st.session_state.plan_generated:
     
     # Only run the generation process if not already generated
     if not st.session_state.plan_generated:
+        # Track plan generation
+        track_user_action("plan_generated", f"Destination: {destination}, Theme: {travel_theme}")
         st.session_state.plan_generated = True
         
         # Add a "Generate New Plan" button at the top when plan is shown
         if st.button("🔄 Generate New Plan", key="new_plan_btn"):
+            track_user_action("new_plan_requested")
             st.session_state.plan_generated = False
             st.rerun()
     
@@ -2201,4 +2403,3 @@ if st.button("🚀 Generate Travel Plan") or st.session_state.plan_generated:
 
     st.markdown('<div class="section-header">🗺️ Your Personalized Itinerary</div>', unsafe_allow_html=True)
     st.markdown(itinerary.content, unsafe_allow_html=True)
-
