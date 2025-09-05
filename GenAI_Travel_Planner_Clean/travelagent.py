@@ -15,6 +15,7 @@ from agno.tools.serpapi import SerpApiTools
 from agno.models.google import Gemini
 from datetime import datetime
 from config import config
+from database import db
 
 # Initialize session state for email access and travel plan
 if 'email_verified' not in st.session_state:
@@ -30,9 +31,19 @@ def validate_email(email):
     return re.match(pattern, email) is not None
 
 def save_user_email(email):
-    """Save user email to analytics"""
+    """Save user email to Supabase database and session state"""
     try:
-        # Save to session state for Streamlit Cloud compatibility
+        # 🗄️ SAVE EMAIL TO SUPABASE DATABASE
+        db_saved = False
+        if db.connected:
+            try:
+                db_saved = db.save_email_signup(email, "travel_planner", True)
+                if db_saved:
+                    print(f"✅ Email saved to database: {email}")
+            except Exception as e:
+                print(f"⚠️ Database save failed: {e}")
+        
+        # Also save to session state as backup
         if 'collected_emails' not in st.session_state:
             st.session_state.collected_emails = []
         
@@ -46,6 +57,9 @@ def save_user_email(email):
         existing_emails = [item['email'] for item in st.session_state.collected_emails]
         if email not in existing_emails:
             st.session_state.collected_emails.append(email_data)
+            
+            # Send to webhook for external tracking
+            send_to_webhook(email, "email_signup")
         
         # Try to save to files (works locally, fails silently on Streamlit Cloud)
         try:
@@ -94,6 +108,28 @@ def save_user_email(email):
     except Exception as e:
         st.error(f"Error saving email: {e}")
         return False
+
+def send_to_webhook(email, action="email_signup"):
+    """Send data to webhook for external tracking"""
+    try:
+        # You can add a webhook URL here (like Zapier, Make.com, or your own server)
+        webhook_url = os.getenv('WEBHOOK_URL', '')
+        
+        if webhook_url:
+            import requests
+            data = {
+                'email': email,
+                'action': action,
+                'timestamp': datetime.now().isoformat(),
+                'source': 'streamlit_cloud_app'
+            }
+            
+            response = requests.post(webhook_url, json=data, timeout=5)
+            return response.status_code == 200
+        
+        return False
+    except Exception:
+        return False  # Fail silently
 
 def track_user_action(action, details=""):
     """Track user actions for analytics"""
