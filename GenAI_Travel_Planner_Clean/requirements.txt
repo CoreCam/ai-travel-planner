@@ -39,3 +39,5 @@ urllib3>=2.0.0
 # Additional dependencies that might be needed
 typing-extensions>=4.0.0
 protobuf>=3.19.0
+
+supabase>=2.0.0
