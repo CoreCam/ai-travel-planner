@@ -106,7 +106,7 @@ def save_user_email(email):
         
         return True
     except Exception as e:
-        st.error(f"Error saving email: {e}")
+        # Silently handle errors to avoid showing technical messages to users
         return False
 
 def send_to_webhook(email, action="email_signup"):
@@ -179,7 +179,7 @@ if not config.validate_required_keys()[0]:
 def show_email_signin():
     """Display email sign-in form"""
     st.markdown("""
-    <div style="text-align: center; padding: 2rem; background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%); 
+    <div style="text-align: center; padding: 2rem; background: #1a1a1a; 
                 border: 3px solid #D4AF37; border-radius: 20px; margin: 2rem 0;">
         <h1 style="color: #D4AF37; font-size: 3rem; margin-bottom: 1rem;">🌍 AI Travel Planner</h1>
         <h3 style="color: #ffffff; margin-bottom: 2rem;">Enter your email to access the planner</h3>
@@ -198,17 +198,12 @@ def show_email_signin():
         if submit_button:
             if email_input:
                 if validate_email(email_input):
-                    # Save email and grant access
-                    if save_user_email(email_input):
-                        st.session_state.email_verified = True
-                        st.session_state.user_email = email_input
-                        st.success("✅ Welcome! Access granted!")
-                        st.rerun()
-                    else:
-                        st.warning("⚠️ Could not save email, but access granted anyway!")
-                        st.session_state.email_verified = True
-                        st.session_state.user_email = email_input
-                        st.rerun()
+                    # Save email and grant access (always show success)
+                    save_user_email(email_input)  # Try to save but don't check result
+                    st.session_state.email_verified = True
+                    st.session_state.user_email = email_input
+                    st.success("✅ Welcome! Access granted!")
+                    st.rerun()
                 else:
                     st.error("❌ Please enter a valid email address")
             else:
@@ -253,14 +248,6 @@ if st.session_state.user_email.lower() in [email.lower() for email in admin_emai
             )
         else:
             st.sidebar.info("No emails collected this session")
-
-# Sign out button
-if st.sidebar.button("🚪 Sign Out", help="Sign out and return to email entry"):
-    st.session_state.email_verified = False
-    st.session_state.user_email = ""
-    st.session_state.plan_generated = False
-    st.rerun()
-
 # Set environment variables for libraries that need them
 os.environ["GOOGLE_API_KEY"] = config.GOOGLE_API_KEY
 
@@ -297,9 +284,91 @@ st.markdown("""
     
     /* Main background and text */
     .stApp {
-        background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+        background: #1a1a1a !important;
         color: #ffffff;
         font-family: 'Poppins', sans-serif;
+    }
+    
+    /* Ensure ALL backgrounds are black */
+    html, body {
+        background-color: #1a1a1a !important;
+    }
+    
+    /* Main content area backgrounds */
+    .main .block-container {
+        background-color: #1a1a1a !important;
+        padding-top: 1rem !important;
+    }
+    
+    .stApp > .main {
+        background-color: #1a1a1a !important;
+    }
+    
+    /* Streamlit main container */
+    .main {
+        background-color: #1a1a1a !important;
+    }
+    
+    /* All div containers */
+    .stApp div {
+        background-color: transparent !important;
+    }
+    
+    /* Specific container fixes */
+    [data-testid="stAppViewContainer"] {
+        background-color: #1a1a1a !important;
+    }
+    
+    [data-testid="main"] {
+        background-color: #1a1a1a !important;
+    }
+    
+    /* Streamlit top header bar - Deploy, Settings, etc. */
+    header[data-testid="stHeader"] {
+        background-color: #1a1a1a !important;
+        border-bottom: 1px solid #333333 !important;
+    }
+    
+    /* Header toolbar */
+    .stApp > header {
+        background-color: #1a1a1a !important;
+    }
+    
+    /* Header container */
+    [data-testid="stToolbar"] {
+        background-color: #1a1a1a !important;
+    }
+    
+    /* Header buttons and elements */
+    header[data-testid="stHeader"] > div {
+        background-color: #1a1a1a !important;
+    }
+    
+    /* Main header section */
+    section[data-testid="stSidebar"] + section > div:first-child {
+        background-color: #1a1a1a !important;
+    }
+    
+    /* App header specifically */
+    .stApp header {
+        background-color: #1a1a1a !important;
+        color: #ffffff !important;
+    }
+    
+    /* Streamlit menu and deploy buttons */
+    [data-testid="stHeader"] button {
+        color: #ffffff !important;
+        background-color: transparent !important;
+    }
+    
+    [data-testid="stHeader"] button:hover {
+        background-color: #333333 !important;
+        color: #D4AF37 !important;
+    }
+    
+    /* Root element styling */
+    .stApp, .stApp > div, .main, .block-container {
+        background-color: #1a1a1a !important;
     }
     
     /* Header styling */
@@ -385,22 +454,383 @@ st.markdown("""
     .stSelectbox > div > div > select,
     .stDateInput > div > div > input,
     .stNumberInput > div > div > input {
-        background-color: #2d2d2d;
-        color: #ffffff;
-        border: 2px solid #D4AF37;
+        background-color: #1a1a1a !important;
+        color: #ffffff !important;
+        border: 2px solid #D4AF37 !important;
         border-radius: 10px;
         padding: 0.5rem;
         font-family: 'Poppins', sans-serif;
+    }
+    
+    /* Enhanced selectbox styling for dropdown options */
+    .stSelectbox > div > div {
+        background-color: #1a1a1a !important;
+    }
+    
+    .stSelectbox [data-baseweb="select"] {
+        background-color: #1a1a1a !important;
+    }
+    
+    .stSelectbox [data-baseweb="select"] > div {
+        background-color: #1a1a1a !important;
+        color: #ffffff !important;
+        border: 2px solid #D4AF37 !important;
+    }
+    
+    /* Dropdown menu styling */
+    .stSelectbox [role="listbox"] {
+        background-color: #1a1a1a !important;
+        border: 2px solid #D4AF37 !important;
+        border-radius: 10px !important;
+    }
+    
+    .stSelectbox [role="option"] {
+        background-color: #1a1a1a !important;
+        color: #ffffff !important;
+    }
+    
+    .stSelectbox [role="option"]:hover,
+    .stSelectbox [role="option"][aria-selected="true"] {
+        background-color: #2d2d2d !important;
+        color: #D4AF37 !important;
     }
     
     .stTextInput > div > div > input:focus,
     .stSelectbox > div > div > select:focus,
     .stDateInput > div > div > input:focus,
     .stNumberInput > div > div > input:focus {
-        border-color: #F4D03F;
-        box-shadow: 0 0 10px rgba(212, 175, 55, 0.5);
+        border-color: #F4D03F !important;
+        box-shadow: 0 0 10px rgba(212, 175, 55, 0.5) !important;
+        background-color: #1a1a1a !important;
+        color: #ffffff !important;
     }
     
+    /* Slider styling */
+    .stSlider > div > div > div > div {
+        background-color: #1a1a1a !important;
+    }
+    
+    .stSlider [data-baseweb="slider"] {
+        background-color: #1a1a1a !important;
+    }
+    
+    .stSlider [data-baseweb="slider"] [data-testid="stTickBar"] {
+        background-color: #D4AF37 !important;
+    }
+    
+    .stSlider [data-baseweb="slider"] [role="slider"] {
+        background-color: #F4D03F !important;
+        border: 2px solid #D4AF37 !important;
+    }
+    
+    .stSlider [data-baseweb="slider"] .stSlider-thumb {
+        background-color: #F4D03F !important;
+        border: 3px solid #D4AF37 !important;
+        box-shadow: 0 0 10px rgba(212, 175, 55, 0.5) !important;
+    }
+    
+    .stSlider [data-baseweb="slider"] .stSlider-track {
+        background-color: #D4AF37 !important;
+    }
+    
+    .stSlider > div > div > div:first-child {
+        color: #ffffff !important;
+        font-weight: 600 !important;
+    }
+    
+    /* Number input styling */
+    .stNumberInput > div > div > input {
+        background-color: #1a1a1a !important;
+        color: #ffffff !important;
+        border: 2px solid #D4AF37 !important;
+        border-radius: 10px !important;
+    }
+    
+    .stNumberInput > div > div > input:focus {
+        border-color: #F4D03F !important;
+        box-shadow: 0 0 10px rgba(212, 175, 55, 0.5) !important;
+    }
+    
+    /* Date input styling */
+    .stDateInput > div > div > input {
+        background-color: #1a1a1a !important;
+        color: #ffffff !important;
+        border: 2px solid #D4AF37 !important;
+        border-radius: 10px !important;
+    }
+    
+    .stDateInput > div > div > input:focus {
+        border-color: #F4D03F !important;
+        box-shadow: 0 0 10px rgba(212, 175, 55, 0.5) !important;
+    }
+    
+    /* Time input styling */
+    .stTimeInput > div > div > input {
+        background-color: #1a1a1a !important;
+        color: #ffffff !important;
+        border: 2px solid #D4AF37 !important;
+        border-radius: 10px !important;
+    }
+    
+    .stTimeInput > div > div > input:focus {
+        border-color: #F4D03F !important;
+        box-shadow: 0 0 10px rgba(212, 175, 55, 0.5) !important;
+    }
+    
+    /* Multi-select styling */
+    .stMultiSelect > div > div {
+        background-color: #1a1a1a !important;
+        border: 2px solid #D4AF37 !important;
+        border-radius: 10px !important;
+    }
+    
+    .stMultiSelect [data-baseweb="tag"] {
+        background-color: #D4AF37 !important;
+        color: #1a1a1a !important;
+    }
+    
+    /* Enhanced Text area styling for activities input */
+    .stTextArea > div > div > textarea {
+        background-color: #1a1a1a !important;
+        color: #ffffff !important;
+        border: 2px solid #D4AF37 !important;
+        border-radius: 10px !important;
+        font-family: 'Poppins', sans-serif !important;
+        padding: 0.5rem !important;
+        font-size: 1rem !important;
+        min-height: 60px !important;
+    }
+    
+    /* More specific text area targeting */
+    [data-testid="stTextArea"] textarea {
+        background-color: #1a1a1a !important;
+        color: #ffffff !important;
+        border: 2px solid #D4AF37 !important;
+        border-radius: 10px !important;
+        font-family: 'Poppins', sans-serif !important;
+    }
+    
+    /* Text area container styling */
+    .stTextArea > div {
+        background-color: transparent !important;
+    }
+    
+    .stTextArea > div > div {
+        background-color: #1a1a1a !important;
+        border: 2px solid #D4AF37 !important;
+        border-radius: 10px !important;
+    }
+    
+    .stTextArea > div > div > textarea:focus {
+        border-color: #F4D03F !important;
+        box-shadow: 0 0 10px rgba(212, 175, 55, 0.5) !important;
+        background-color: #1a1a1a !important;
+        color: #ffffff !important;
+    }
+    
+    /* Text area placeholder styling */
+    .stTextArea textarea::placeholder {
+        color: #cccccc !important;
+        opacity: 0.7 !important;
+    }
+    
+    /* Enhanced Date input styling to match selectbox exactly */
+    .stDateInput > div > div > input {
+        background-color: #1a1a1a !important;
+        color: #ffffff !important;
+        border: 2px solid #D4AF37 !important;
+        border-radius: 10px !important;
+        padding: 0.5rem !important;
+        font-family: 'Poppins', sans-serif !important;
+        font-size: 1rem !important;
+        height: 40px !important;
+    }
+    
+    /* More specific date input targeting */
+    [data-testid="stDateInput"] input {
+        background-color: #1a1a1a !important;
+        color: #ffffff !important;
+        border: 2px solid #D4AF37 !important;
+        border-radius: 10px !important;
+    }
+    
+    /* Remove borders from date input containers to avoid double borders */
+    .stDateInput > div {
+        background-color: transparent !important;
+        border: none !important;
+    }
+    
+    .stDateInput > div > div {
+        background-color: transparent !important;
+        border: none !important;
+        border-radius: 0 !important;
+    }
+    
+    .stDateInput > div > div > input:focus {
+        border-color: #F4D03F !important;
+        box-shadow: 0 0 10px rgba(212, 175, 55, 0.5) !important;
+        background-color: #1a1a1a !important;
+        color: #ffffff !important;
+    }
+    
+    /* Date input calendar icon styling */
+    .stDateInput > div > div > div > div {
+        background-color: #1a1a1a !important;
+    }
+    
+    .stDateInput [data-baseweb="calendar"] {
+        background-color: #1a1a1a !important;
+        border: 2px solid #D4AF37 !important;
+    }
+    
+    /* Ensure labels are consistent */
+    .stTextArea > label,
+    .stDateInput > label {
+        color: #ffffff !important;
+        font-weight: 600 !important;
+        font-family: 'Poppins', sans-serif !important;
+    }
+    
+    /* Email form input styling */
+    form[data-testid="form"] .stTextInput > div > div > input {
+        background-color: #1a1a1a !important;
+        color: #ffffff !important;
+        border: 2px solid #D4AF37 !important;
+        border-radius: 10px !important;
+        font-size: 1.1rem !important;
+        padding: 0.75rem !important;
+    }
+    
+    form[data-testid="form"] .stTextInput > div > div > input:focus {
+        border-color: #F4D03F !important;
+        box-shadow: 0 0 15px rgba(212, 175, 55, 0.6) !important;
+    }
+    
+    /* Form submit button styling */
+    form[data-testid="form"] .stButton > button {
+        background: linear-gradient(45deg, #D4AF37 0%, #F4D03F 100%) !important;
+        color: #1a1a1a !important;
+        border: none !important;
+        border-radius: 15px !important;
+        padding: 0.75rem 2rem !important;
+        font-weight: 700 !important;
+        font-size: 1.2rem !important;
+        box-shadow: 0 6px 20px rgba(212, 175, 55, 0.4) !important;
+        transition: all 0.3s ease !important;
+    }
+    
+    form[data-testid="form"] .stButton > button:hover {
+        background: linear-gradient(45deg, #F4D03F 0%, #D4AF37 100%) !important;
+        transform: translateY(-3px) !important;
+        box-shadow: 0 8px 25px rgba(212, 175, 55, 0.6) !important;
+    }
+    
+    /* Sidebar sign out button styling */
+    .stSidebar .stButton > button {
+        background: linear-gradient(45deg, #1a1a1a 0%, #2d2d2d 100%) !important;
+        color: #ffffff !important;
+        border: 2px solid #D4AF37 !important;
+        border-radius: 10px !important;
+        padding: 0.5rem 1rem !important;
+        font-weight: 600 !important;
+        transition: all 0.3s ease !important;
+    }
+    
+    .stSidebar .stButton > button:hover {
+        background: linear-gradient(45deg, #D4AF37 0%, #F4D03F 100%) !important;
+        color: #1a1a1a !important;
+        border-color: #F4D03F !important;
+        transform: translateY(-2px) !important;
+        box-shadow: 0 4px 15px rgba(212, 175, 55, 0.4) !important;
+    }
+    
+    /* Top Streamlit header bar styling */
+    .stApp > header {
+        background-color: #1a1a1a !important;
+    }
+    
+    .stApp > header [data-testid="stHeader"] {
+        background-color: #1a1a1a !important;
+    }
+    
+    /* Sidebar padding fix */
+    .stSidebar > div:first-child {
+        padding-right: 1rem !important;
+        padding-left: 0.5rem !important;
+    }
+    
+    .stSidebar .element-container {
+        padding-right: 0.5rem !important;
+    }
+    
+    /* Expander/Dropdown styling */
+    .stExpander {
+        background-color: #1a1a1a !important;
+        border: 2px solid #D4AF37 !important;
+        border-radius: 10px !important;
+        margin: 0.5rem 0 !important;
+    }
+    
+    .stExpander > div:first-child {
+        background-color: #1a1a1a !important;
+        color: #ffffff !important;
+        border-radius: 10px !important;
+    }
+    
+    .stExpander > div:first-child:hover {
+        background-color: #2d2d2d !important;
+        border-color: #F4D03F !important;
+    }
+    
+    .stExpander [data-testid="stExpanderToggleIcon"] {
+        color: #D4AF37 !important;
+    }
+    
+    .stExpander > div:first-child > div {
+        background-color: #1a1a1a !important;
+        color: #ffffff !important;
+        font-weight: 600 !important;
+        padding: 0.75rem 1rem !important;
+    }
+    
+    .stExpander[data-testid="stExpander"][aria-expanded="true"] > div:first-child {
+        background-color: #2d2d2d !important;
+        border-color: #F4D03F !important;
+        box-shadow: 0 0 10px rgba(212, 175, 55, 0.3) !important;
+    }
+    
+    .stExpander > div:last-child {
+        background-color: #1a1a1a !important;
+        border-color: #D4AF37 !important;
+        border-top: none !important;
+    }
+    
+    /* Specific expander content styling */
+    .stExpander [data-testid="stExpanderContent"] {
+        background-color: #1a1a1a !important;
+        color: #ffffff !important;
+        padding: 1rem !important;
+        border-radius: 0 0 10px 10px !important;
+    }
+    
+    /* Fix for expander text color */
+    .stExpander .element-container {
+        background-color: transparent !important;
+    }
+    
+    .stExpander .stMarkdown p {
+        color: #ffffff !important;
+    }
+    
+    .stExpander .stMarkdown h1,
+    .stExpander .stMarkdown h2,
+    .stExpander .stMarkdown h3,
+    .stExpander .stMarkdown h4,
+    .stExpander .stMarkdown h5,
+    .stExpander .stMarkdown h6 {
+        color: #D4AF37 !important;
+    }
+
     /* Buttons */
     .stButton > button {
         background: linear-gradient(45deg, #D4AF37 0%, #F4D03F 100%);
@@ -995,12 +1425,96 @@ st.sidebar.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# Enhanced Budget Selection
-budget = st.sidebar.radio(
-    "Select Your Budget Range:",
-    ["💸 Economy", "💳 Standard", "💎 Luxury"],
-    label_visibility="collapsed"
-)
+# Enhanced Budget Selection with custom styling
+st.sidebar.markdown("""
+<style>
+    /* Secondary (unselected) buttons */
+    div[data-testid="column"] button[kind="secondary"] {
+        background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%) !important;
+        color: #ffffff !important;
+        border: 2px solid #333333 !important;
+        border-radius: 10px !important;
+        padding: 0.5rem 1rem !important;
+        transition: all 0.3s ease !important;
+        font-weight: 500 !important;
+        font-size: 0.9rem !important;
+        margin: 0.2rem 0 !important;
+    }
+    
+    div[data-testid="column"] button[kind="secondary"]:hover {
+        border-color: #D4AF37 !important;
+        background: linear-gradient(135deg, #2a2a2a 0%, #3a3a3a 100%) !important;
+        transform: translateY(-1px) !important;
+        box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3) !important;
+    }
+    
+    /* Primary (selected) buttons */
+    div[data-testid="column"] button[kind="primary"] {
+        background: linear-gradient(135deg, #D4AF37 0%, #B8941F 100%) !important;
+        color: #000000 !important;
+        border: 2px solid #D4AF37 !important;
+        border-radius: 10px !important;
+        padding: 0.5rem 1rem !important;
+        transition: all 0.3s ease !important;
+        font-weight: 600 !important;
+        font-size: 0.9rem !important;
+        margin: 0.2rem 0 !important;
+        box-shadow: 0 4px 15px rgba(212, 175, 55, 0.4) !important;
+    }
+    
+    div[data-testid="column"] button[kind="primary"]:hover {
+        background: linear-gradient(135deg, #E6C547 0%, #D4AF37 100%) !important;
+        transform: translateY(-1px) !important;
+        box-shadow: 0 6px 20px rgba(212, 175, 55, 0.5) !important;
+    }
+    
+    div[data-testid="column"] button:active {
+        transform: translateY(0px) !important;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+budget_options = ["💸 Economy", "💳 Standard", "💎 Luxury"]
+budget_values = ["Economy", "Standard", "Luxury"]
+
+# Initialize budget selection in session state
+if 'selected_budget' not in st.session_state:
+    st.session_state.selected_budget = 0
+
+# Create custom selection interface
+for i, (option, value) in enumerate(zip(budget_options, budget_values)):
+    col1, col2, col3 = st.sidebar.columns([1, 6, 1])
+    with col2:
+        # Create button with current selection state styling
+        is_selected = st.session_state.selected_budget == i
+        button_style = "primary" if is_selected else "secondary"
+        
+        button_clicked = st.button(
+            option, 
+            key=f"budget_{i}", 
+            use_container_width=True,
+            type=button_style
+        )
+        if button_clicked and not is_selected:
+            # Only update if clicking a different option
+            st.session_state.selected_budget = i
+            st.rerun()
+    
+    # Add visual indicator for selected option
+    if st.session_state.selected_budget == i:
+        st.sidebar.markdown(f"""
+        <div style="text-align: center; margin-top: -0.5rem; margin-bottom: 0.5rem;">
+            <span style="color: #D4AF37; font-size: 1.5rem; filter: drop-shadow(0 0 8px #D4AF37);">●</span>
+        </div>
+        """, unsafe_allow_html=True)
+    else:
+        st.sidebar.markdown(f"""
+        <div style="text-align: center; margin-top: -0.5rem; margin-bottom: 0.5rem;">
+            <span style="color: #666666; font-size: 1.5rem;">○</span>
+        </div>
+        """, unsafe_allow_html=True)
+
+budget = budget_values[st.session_state.selected_budget]
 
 st.sidebar.markdown("""
 <div style="margin: 1rem 0;">
@@ -1021,12 +1535,48 @@ st.sidebar.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# Enhanced Flight Class Selection
-flight_class = st.sidebar.radio(
-    "Choose Your Flight Experience:",
-    ["🪑 Economy", "💺 Business", "👑 First Class"],
-    label_visibility="collapsed"
-)
+# Enhanced Flight Class Selection with custom styling
+flight_options = ["🪑 Economy", "💺 Business", "👑 First Class"]
+flight_values = ["economy", "business", "first"]
+
+# Initialize flight class selection in session state
+if 'selected_flight_class' not in st.session_state:
+    st.session_state.selected_flight_class = 0
+
+# Create custom selection interface
+for i, (option, value) in enumerate(zip(flight_options, flight_values)):
+    col1, col2, col3 = st.sidebar.columns([1, 6, 1])
+    with col2:
+        # Create button with current selection state styling
+        is_selected = st.session_state.selected_flight_class == i
+        button_style = "primary" if is_selected else "secondary"
+        
+        button_clicked = st.button(
+            option, 
+            key=f"flight_{i}", 
+            use_container_width=True,
+            type=button_style
+        )
+        if button_clicked and not is_selected:
+            # Only update if clicking a different option
+            st.session_state.selected_flight_class = i
+            st.rerun()
+    
+    # Add visual indicator for selected option
+    if st.session_state.selected_flight_class == i:
+        st.sidebar.markdown(f"""
+        <div style="text-align: center; margin-top: -0.5rem; margin-bottom: 0.5rem;">
+            <span style="color: #D4AF37; font-size: 1.5rem; filter: drop-shadow(0 0 8px #D4AF37);">●</span>
+        </div>
+        """, unsafe_allow_html=True)
+    else:
+        st.sidebar.markdown(f"""
+        <div style="text-align: center; margin-top: -0.5rem; margin-bottom: 0.5rem;">
+            <span style="color: #666666; font-size: 1.5rem;">○</span>
+        </div>
+        """, unsafe_allow_html=True)
+
+flight_class = flight_values[st.session_state.selected_flight_class]
 
 # Compact Travel Inspiration Box
 st.sidebar.markdown("""
@@ -1279,18 +1829,18 @@ def get_airport_display_name(airport_code):
     return location_names.get(airport_code, f"{airport_code} Airport")
 
 # Streamlined flight search - direct to Skyscanner for production
-def get_flight_booking_url(source_iata, destination_iata, departure_date, return_date, num_travelers=1):
+def get_flight_booking_url(source_iata, destination_iata, departure_date, return_date, num_travelers=1, flight_class="economy"):
     """Generate Skyscanner booking URL for flights"""
-    return f"https://www.skyscanner.com/transport/flights/{source_iata}/{destination_iata}/{departure_date.strftime('%y%m%d')}/{return_date.strftime('%y%m%d')}/?adults={num_travelers}&children=0&infants=0&cabinclass=economy"
+    return f"https://www.skyscanner.com/transport/flights/{source_iata}/{destination_iata}/{departure_date.strftime('%y%m%d')}/{return_date.strftime('%y%m%d')}/?adults={num_travelers}&children=0&infants=0&cabinclass={flight_class}"
 
-def generate_flight_summary(source_iata, destination_iata, departure_date, return_date, num_travelers):
+def generate_flight_summary(source_iata, destination_iata, departure_date, return_date, num_travelers, flight_class="economy"):
     """Generate a clean flight summary for display"""
     travelers_text = "1 traveler" if num_travelers == 1 else f"{num_travelers} travelers"
     return {
         'route': f"{source_iata} ➜ {destination_iata} ➜ {source_iata}",
         'dates': f"{departure_date.strftime('%b %d')} - {return_date.strftime('%b %d, %Y')}",
         'travelers': travelers_text,
-        'booking_url': get_flight_booking_url(source_iata, destination_iata, departure_date, return_date, num_travelers)
+        'booking_url': get_flight_booking_url(source_iata, destination_iata, departure_date, return_date, num_travelers, flight_class)
     }
 
 # Skyscanner API Integration for Enhanced Flight Search
@@ -1604,7 +2154,7 @@ def fetch_business_venues(location):
         unique_venues = {venue['place_id']: venue for venue in all_venues}.values()
         sorted_venues = sorted(unique_venues, key=lambda x: (x['rating'] if x['rating'] != 'N/A' else 0), reverse=True)
 
-        return list(sorted_venues)[:4]  # Return top 4 business venues
+        return list(sorted_venues)[:3]  # Return top 3 business venues
 
     except Exception as error:
         return generate_mock_business_venues(location)
@@ -1987,7 +2537,7 @@ researcher = Agent(
         "Prioritize information from reliable sources and official travel guides.",
         "Provide well-structured summaries with key insights and recommendations."
     ],
-    model=Gemini(id="gemini-2.0-flash-exp"),
+    model=Gemini(id="gemini-1.5-flash"),
     add_datetime_to_instructions=True,
 )
 
@@ -2000,7 +2550,7 @@ planner = Agent(
         "Optimize the schedule for convenience and enjoyment.",
         "Present the itinerary in a structured format."
     ],
-    model=Gemini(id="gemini-2.0-flash-exp"),
+    model=Gemini(id="gemini-1.5-flash"),
     add_datetime_to_instructions=True,
 )
 
@@ -2013,7 +2563,7 @@ hotel_restaurant_finder = Agent(
         "Prioritize results based on user preferences, ratings, and availability.",
         "Provide direct booking links or reservation options where possible."
     ],
-    model=Gemini(id="gemini-2.0-flash-exp"),
+    model=Gemini(id="gemini-1.5-flash"),
     add_datetime_to_instructions=True,
 )
 
@@ -2043,6 +2593,35 @@ if st.button("🚀 Generate Travel Plan") or st.session_state.plan_generated:
     # Initialize progress tracking
     progress_container = st.container()
     
+    # Add custom CSS for white progress bar
+    st.markdown("""
+    <style>
+        /* Progress bar styling for white appearance */
+        .stProgress > div > div > div > div {
+            background-color: #ffffff !important;
+            box-shadow: 0 2px 10px rgba(255, 255, 255, 0.3) !important;
+        }
+        
+        .stProgress > div > div > div {
+            background-color: #333333 !important;
+            border-radius: 10px !important;
+            height: 12px !important;
+        }
+        
+        .stProgress {
+            margin: 1rem 0 !important;
+        }
+        
+        /* Status text styling */
+        .stEmpty > div > p {
+            color: #ffffff !important;
+            font-weight: 500 !important;
+            text-align: center !important;
+            margin: 0.5rem 0 !important;
+        }
+    </style>
+    """, unsafe_allow_html=True)
+    
     with progress_container:
         # Create a progress bar
         progress_bar = st.progress(0)
@@ -2053,7 +2632,7 @@ if st.button("🚀 Generate Travel Plan") or st.session_state.plan_generated:
         progress_bar.progress(10)
         
         # Generate flight booking info (no API calls, direct to Skyscanner)
-        flight_summary = generate_flight_summary(source_iata, destination_iata, departure_date, return_date, num_travelers)
+        flight_summary = generate_flight_summary(source_iata, destination_iata, departure_date, return_date, num_travelers, flight_class)
         
         # Stage 2: Restaurant Search
         status_text.text("🍽️ Discovering local restaurants...")
@@ -2422,7 +3001,7 @@ if st.button("🚀 Generate Travel Plan") or st.session_state.plan_generated:
             st.write(summary)
             
             # Dropdown with detailed information and sources
-            with st.expander(f"� More details about {category.lower()}"):
+            with st.expander(f"� {category}"):
                 full_description = info.get('full_description', summary)
                 st.write(full_description)
                 
